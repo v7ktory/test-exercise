@@ -30,7 +30,6 @@ services:
       interval: 5s
       timeout: 30s
       retries: 3
-
 volumes:
   app_data:
   mongodb_data:
