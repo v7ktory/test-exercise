@@ -25,12 +25,12 @@ func NewAuthRepository(db *mongo.Database) *AuthRepository {
 	}
 }
 
-func (r *AuthRepository) Create(ctx context.Context, user *model.User) (string, error) {
+func (r *AuthRepository) Create(ctx context.Context, user *model.User) (uuid.UUID, error) {
 	_, err := r.db.InsertOne(ctx, user)
 	if err != nil {
-		return "", err
+		return uuid.Nil, err
 	}
-	return user.UUID.String(), nil
+	return user.UUID, nil
 }
 
 func (r *AuthRepository) GetByCredentials(ctx context.Context, email, password string) (*model.User, error) {

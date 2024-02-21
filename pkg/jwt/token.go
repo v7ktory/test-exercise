@@ -7,62 +7,73 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
+	"github.com/v7ktory/test/internal/model"
 )
 
 type JWTManager interface {
-	GenerateTokenPair(userID string, ttl time.Duration) (string, string, error)
-	generateAccessToken(userID string, ttl time.Duration) (string, error)
-	generateRefreshToken() (string, error)
+	GenerateTokenPair(userID uuid.UUID, accessTokenTTL, refreshTokenTTL time.Duration) (*model.AccessToken, *model.RefreshToken, error)
+	generateAccessToken(userID uuid.UUID, ttl time.Duration) (*model.AccessToken, error)
+	generateRefreshToken(userID uuid.UUID, ttl time.Duration) (*model.RefreshToken, error)
 	validateToken(signedToken string) (string, error)
 }
 
 type JWT struct {
-	secretKey string
+	signingKey string
 }
 
-func NewJWT(secretKey string) *JWT {
+func NewJWT(signingKey string) *JWT {
 	return &JWT{
-		secretKey: secretKey,
+		signingKey: signingKey,
 	}
 }
 
-func (j *JWT) GenerateTokenPair(userID string, ttl time.Duration) (string, string, error) {
-	access, err := j.generateAccessToken(userID, ttl)
-	if err != nil {
-		return "", "", err
-	}
+func (j *JWT) GenerateTokenPair(userID uuid.UUID, accessTokenTTL, refreshTokenTTL time.Duration) (*model.AccessToken, *model.RefreshToken, error) {
 
-	refresh, err := j.generateRefreshToken()
+	accessToken, err := j.generateAccessToken(userID, accessTokenTTL)
 	if err != nil {
-		return "", "", err
+		return nil, nil, err
 	}
-
-	return access, refresh, nil
+	refreshToken, err := j.generateRefreshToken(userID, refreshTokenTTL)
+	if err != nil {
+		return nil, nil, err
+	}
+	return accessToken, refreshToken, nil
 }
 
-func (j *JWT) generateAccessToken(userID string, ttl time.Duration) (string, error) {
+func (j *JWT) generateAccessToken(userID uuid.UUID, ttl time.Duration) (*model.AccessToken, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS512, jwt.MapClaims{
 		"sub": userID,
 		"exp": time.Now().Add(ttl).Unix(),
 	})
 
-	tokenString, err := token.SignedString([]byte(j.secretKey))
+	signedString, err := token.SignedString([]byte(j.signingKey))
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return tokenString, nil
+	accessToken := model.AccessToken{
+		Token:  signedString,
+		ID:     uuid.New(),
+		UserID: userID,
+	}
+	return &accessToken, nil
 }
 
-func (j *JWT) generateRefreshToken() (string, error) {
+func (j *JWT) generateRefreshToken(userID uuid.UUID, ttl time.Duration) (*model.RefreshToken, error) {
 	tokenBytes := make([]byte, 32)
 	_, err := rand.Read(tokenBytes)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	token := base64.StdEncoding.EncodeToString(tokenBytes)
 
-	return token, nil
+	refreshToken := model.RefreshToken{
+		Token:  token,
+		ID:     uuid.New(),
+		UserID: userID,
+	}
+	return &refreshToken, nil
 }
 
 func (j *JWT) validateToken(signedToken string) (string, error) {
@@ -70,7 +81,7 @@ func (j *JWT) validateToken(signedToken string) (string, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
-		return []byte(j.secretKey), nil
+		return []byte(j.signingKey), nil
 	})
 	if err != nil {
 		return "", err

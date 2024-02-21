@@ -7,6 +7,8 @@ import (
 	"github.com/v7ktory/test/internal/repository"
 	"github.com/v7ktory/test/internal/service"
 	"github.com/v7ktory/test/pkg/database/mongodb"
+	"github.com/v7ktory/test/pkg/hash"
+	"github.com/v7ktory/test/pkg/jwt"
 	"github.com/v7ktory/test/pkg/logger"
 )
 
@@ -21,12 +23,18 @@ func Run() {
 	}
 	db := mongoClient.Database(cfg.Mongo.DBName)
 	log := logger.NewLogger()
+	hash := hash.NewHasher(cfg.Auth.PasswordSalt)
+	jwt := jwt.NewJWT(cfg.Auth.JWT.SigningKey)
+	accessTTL := cfg.Auth.JWT.AccessTokenTTL
+	refreshTTL := cfg.Auth.JWT.RefreshTokenTTL
 	repository := repository.NewRepository(db)
 	service := service.NewService(
-		repository,
-		cfg.Auth.PasswordSalt,
-		cfg.Auth.JWT.SigningKey,
+		*repository,
+		*hash,
+		*jwt,
 		log,
-		cfg.Auth.JWT.AccessTokenTTL,
+		accessTTL,
+		refreshTTL,
 	)
+
 }

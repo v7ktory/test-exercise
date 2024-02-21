@@ -12,7 +12,7 @@ import (
 )
 
 type Auth interface {
-	SignUp(ctx context.Context, user *model.User) (string, error)
+	SignUp(ctx context.Context, user *model.User) (string, string, error)
 	Login(ctx context.Context, email, password string) (string, error)
 }
 
@@ -20,8 +20,8 @@ type Service struct {
 	Auth
 }
 
-func NewService(repo repository.AuthRepository, hash hash.Hasher, jwt jwt.JWT, log *slog.Logger, ttl time.Duration) *Service {
+func NewService(repo repository.Repository, hash hash.Hasher, jwt jwt.JWT, log *slog.Logger, accessTokenTTL, refreshTokenTTL time.Duration) *Service {
 	return &Service{
-		Auth: NewAuthService(repo, hash, jwt, log, ttl),
+		Auth: NewAuthService(repo, hash, jwt, log, accessTokenTTL, refreshTokenTTL),
 	}
 }
