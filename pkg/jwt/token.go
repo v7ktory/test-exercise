@@ -27,7 +27,6 @@ func NewJWT(secretKey string) *JWT {
 }
 
 func (j *JWT) GenerateTokenPair(userID string, ttl time.Duration) (string, string, error) {
-
 	access, err := j.generateAccessToken(userID, ttl)
 	if err != nil {
 		return "", "", err
