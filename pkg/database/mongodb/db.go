@@ -16,8 +16,8 @@ import (
 var errNoDBHosts = errors.New("no dbHosts")
 
 type Provider struct {
-	db           *mongo.Database
-	queryTimeout time.Duration
+	DB           *mongo.Database
+	QueryTimeout time.Duration
 }
 
 func NewMongoDB(ctx context.Context, mongoCfg config.MongoCfg) (*Provider, error) {
@@ -53,15 +53,15 @@ func NewMongoDB(ctx context.Context, mongoCfg config.MongoCfg) (*Provider, error
 	}
 
 	return &Provider{
-		queryTimeout: queryTimeout,
-		db:           client.Database(mongoCfg.DB),
+		QueryTimeout: queryTimeout,
+		DB:           client.Database(mongoCfg.DB),
 	}, nil
 }
 
 func (p *Provider) GetCollection(name string) *mongo.Collection {
-	return p.db.Collection(name)
+	return p.DB.Collection(name)
 }
 
 func (p *Provider) GetClient() *mongo.Client {
-	return p.db.Client()
+	return p.DB.Client()
 }

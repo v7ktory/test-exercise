@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -15,19 +16,22 @@ import (
 	"github.com/v7ktory/test/internal/server"
 	"github.com/v7ktory/test/internal/service"
 	"github.com/v7ktory/test/internal/transport/rest"
+
 	"github.com/v7ktory/test/pkg/database/mongodb"
 	"github.com/v7ktory/test/pkg/hash"
 	"github.com/v7ktory/test/pkg/jwt"
 	"github.com/v7ktory/test/pkg/logger"
 )
 
+const timeout = 5 * time.Second
+
 func Run() {
 	cfg, err := config.InitCfg()
 	if err != nil {
 		log.Fatal(err)
 	}
-	// todo конфиг допиши
-	mongo, err := mongodb.NewMongoDB(context.TODO(), cfg.Mongo)
+	fmt.Println(cfg.Mongo.Hosts, cfg.Mongo.Username, cfg.Mongo.Password, cfg.Mongo.DB)
+	mongo, err := mongodb.NewMongoDB(context.Background(), cfg.Mongo)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -63,8 +67,6 @@ func Run() {
 	signal.Notify(quit, syscall.SIGTERM, syscall.SIGINT)
 
 	<-quit
-
-	const timeout = 5 * time.Second
 
 	ctx, shutdown := context.WithTimeout(context.Background(), timeout)
 	defer shutdown()

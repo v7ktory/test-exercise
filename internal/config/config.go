@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"os"
 	"strings"
 	"time"
@@ -12,7 +13,7 @@ const (
 	defaultAccessTokenTTL  = 30 * time.Minute
 	defaultRefreshTokenTTL = 24 * time.Hour * 30
 
-	defaultQueryTimeout = 5 * time.Second
+	defaultQueryTimeout = 10 * time.Second
 
 	defaultPort           = "8080"
 	defaultMaxHeaderBytes = 1 << 20
@@ -57,24 +58,37 @@ func InitCfg() (*Cfg, error) {
 	}
 
 	var cfg Cfg
-	loadEnv(&cfg)
+	err = loadEnv(&cfg)
+	if err != nil {
+		return nil, err
+	}
 
-	loadDefault(&cfg)
+	err = loadDefault(&cfg)
+	if err != nil {
+		return nil, err
+	}
+
 	return &cfg, nil
 }
 
-func loadEnv(cfg *Cfg) {
+func loadEnv(cfg *Cfg) error {
 	mongoHosts := os.Getenv("MONGO_HOSTS")
+	if mongoHosts == "" {
+		return errors.New("missing MONGO_HOSTS")
+	}
 
 	cfg.Mongo.Hosts = strings.Split(mongoHosts, ",")
 	cfg.Mongo.Username = os.Getenv("MONGO_USERNAME")
 	cfg.Mongo.Password = os.Getenv("MONGO_PASS")
+	cfg.Mongo.DB = os.Getenv("MONGO_DBNAME")
 
 	cfg.Auth.PasswordSalt = os.Getenv("PASSWORD_SALT")
 	cfg.Auth.JWT.SigningKey = os.Getenv("JWT_SIGNING_KEY")
 
+	return nil
 }
-func loadDefault(cfg *Cfg) {
+
+func loadDefault(cfg *Cfg) error {
 	cfg.Auth.JWT.AccessTokenTTL = defaultAccessTokenTTL
 	cfg.Auth.JWT.RefreshTokenTTL = defaultRefreshTokenTTL
 
@@ -84,4 +98,6 @@ func loadDefault(cfg *Cfg) {
 	cfg.Server.MaxHeaderBytes = defaultMaxHeaderBytes
 	cfg.Server.ReadTimeout = defaultReadTimeout
 	cfg.Server.WriteTimeout = defaultWriteTimeout
+
+	return nil
 }

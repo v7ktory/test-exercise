@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/v7ktory/test/internal/model"
@@ -26,16 +27,26 @@ func NewAuthRepository(provider *mongodb.Provider) *AuthRepository {
 }
 
 func (r *AuthRepository) Create(ctx context.Context, user *model.User) (uuid.UUID, error) {
-	_, err := r.provider.GetCollection("users").InsertOne(ctx, user)
+	collection := r.provider.GetCollection("users")
+
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(r.provider.QueryTimeout)*time.Second)
+	defer cancel()
+
+	_, err := collection.InsertOne(ctx, user)
 	if err != nil {
-		return uuid.Nil, err
+		return uuid.Nil, ErrUserExists
 	}
 	return user.UUID, nil
 }
 
 func (r *AuthRepository) GetByCredentials(ctx context.Context, email, password string) (*model.User, error) {
+	collection := r.provider.GetCollection("users")
+
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(r.provider.QueryTimeout)*time.Second)
+	defer cancel()
+
 	var user model.User
-	if err := r.provider.GetCollection("users").FindOne(ctx, bson.M{"email": email, "password": password}).Decode(&user); err != nil {
+	if err := collection.FindOne(ctx, bson.M{"email": email, "password": password}).Decode(&user); err != nil {
 		return nil, ErrUserNotFound
 	}
 	return &user, nil
@@ -46,6 +57,11 @@ func (r *AuthRepository) GetByRefreshToken(ctx context.Context, refreshToken str
 }
 
 func (r *AuthRepository) SetSession(ctx context.Context, userID uuid.UUID, session model.RefreshSession) error {
-	_, err := r.provider.GetCollection("users").UpdateOne(ctx, bson.M{"_id": userID}, bson.M{"$set": bson.M{"session": session}})
+	collection := r.provider.GetCollection("users")
+
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(r.provider.QueryTimeout)*time.Second)
+	defer cancel()
+
+	_, err := collection.UpdateOne(ctx, bson.M{"_id": userID}, bson.M{"$set": bson.M{"session": session}})
 	return err
 }

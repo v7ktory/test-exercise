@@ -33,11 +33,6 @@ func NewAuthService(repo repository.Repository, hash hash.Hasher, jwt jwt.JWT, l
 }
 
 func (s *AuthService) SignUp(ctx context.Context, user *model.User) (*model.AccessToken, *model.RefreshToken, error) {
-	if err := user.Validate(); err != nil {
-		s.log.Error("failed to validate user:", err)
-		return nil, nil, err
-	}
-
 	hashedPassword, err := s.hash.Hash(user.Password)
 	if err != nil {
 		s.log.Error("failed to hash password:", err)
