@@ -14,8 +14,8 @@ import (
 
 type AuthService struct {
 	repo            repository.Repository
-	jwt             jwt.JWT
 	hash            hash.Hasher
+	jwt             jwt.JWT
 	log             *slog.Logger
 	accessTokenTTL  time.Duration
 	refreshTokenTTL time.Duration
@@ -24,72 +24,106 @@ type AuthService struct {
 func NewAuthService(repo repository.Repository, hash hash.Hasher, jwt jwt.JWT, log *slog.Logger, accessTokenTTL, refreshTokenTTL time.Duration) *AuthService {
 	return &AuthService{
 		repo:            repo,
-		jwt:             jwt,
 		hash:            hash,
+		jwt:             jwt,
 		log:             log,
 		accessTokenTTL:  accessTokenTTL,
 		refreshTokenTTL: refreshTokenTTL,
 	}
 }
 
-func (s *AuthService) SignUp(ctx context.Context, user *model.User) (string, string, error) {
+func (s *AuthService) SignUp(ctx context.Context, user *model.User) (*model.AccessToken, *model.RefreshToken, error) {
 	if err := user.Validate(); err != nil {
-		s.log.Error("failed to validate user", err)
-		return "", "", err
+		s.log.Error("failed to validate user:", err)
+		return nil, nil, err
 	}
 
 	hashedPassword, err := s.hash.Hash(user.Password)
 	if err != nil {
-		s.log.Error("failed to hash password", err)
-		return "", "", err
+		s.log.Error("failed to hash password:", err)
+		return nil, nil, err
 	}
 
-	u := model.User{
-		UUID:         uuid.New(),
-		Name:         user.Name,
-		Email:        user.Email,
-		Password:     hashedPassword,
-		RegisteredAt: time.Now(),
-	}
+	user.UUID = uuid.New()
+	user.Password = hashedPassword
 
-	userID, err := s.repo.Create(ctx, &u)
+	userID, err := s.repo.Create(ctx, user)
 	if err != nil {
-		s.log.Error("failed to create user", err)
-		return "", "", err
+		s.log.Error("failed to create user:", err)
+		return nil, nil, err
 	}
 
 	access, refresh, err := s.jwt.GenerateTokenPair(userID, s.accessTokenTTL, s.refreshTokenTTL)
 	if err != nil {
-		s.log.Error("failed to generate token pair", err)
-		return "", "", err
+		s.log.Error("failed to generate token pair:", err)
+		return nil, nil, err
 	}
 
 	hashedRefresh, err := s.hash.Hash(refresh.Token)
 	if err != nil {
-		s.log.Error("failed to hash refresh token", err)
-		return "", "", err
+		s.log.Error("failed to hash refresh token:", err)
+		return nil, nil, err
 	}
 
-	err = s.repo.SetSession(ctx, u.UUID, model.Session{
+	refreshSession := model.RefreshSession{
 		ID:     uuid.New(),
-		UserID: u.UUID,
+		UserID: userID,
 		RefreshToken: model.RefreshToken{
 			Token:     hashedRefresh,
 			ID:        refresh.ID,
-			UserID:    u.UUID,
+			UserID:    userID,
 			ExpiresAt: time.Now().Add(s.refreshTokenTTL),
 		},
 		ExpiresAt: time.Now().Add(s.refreshTokenTTL),
-	})
+	}
+
+	err = s.repo.SetSession(ctx, userID, refreshSession)
 	if err != nil {
-		s.log.Error("failed to set session", err)
-		return "", "", err
+		s.log.Error("failed to set session:", err)
+		return nil, nil, err
 	}
 
 	s.log.Info("user created successfully")
-	return access.Token, refresh.Token, nil
+	return access, refresh, nil
 }
 
-func (s *AuthService) Login(ctx context.Context, email, password string) (string, error) {
-	return "", nil
+func (s *AuthService) Login(ctx context.Context, email, password string) (*model.AccessToken, *model.RefreshToken, error) {
+	user, err := s.repo.GetByCredentials(ctx, email, password)
+	if err != nil {
+		s.log.Error("failed to get user by credentials:", err)
+		return nil, nil, err
+	}
+
+	access, refresh, err := s.jwt.GenerateTokenPair(user.UUID, s.accessTokenTTL, s.refreshTokenTTL)
+	if err != nil {
+		s.log.Error("failed to generate token pair:", err)
+		return nil, nil, err
+	}
+
+	hashedRefresh, err := s.hash.Hash(refresh.Token)
+	if err != nil {
+		s.log.Error("failed to hash refresh token:", err)
+		return nil, nil, err
+	}
+
+	refreshSession := model.RefreshSession{
+		ID:     uuid.New(),
+		UserID: user.UUID,
+		RefreshToken: model.RefreshToken{
+			Token:     hashedRefresh,
+			ID:        refresh.ID,
+			UserID:    user.UUID,
+			ExpiresAt: time.Now().Add(s.refreshTokenTTL),
+		},
+		ExpiresAt: time.Now().Add(s.refreshTokenTTL),
+	}
+
+	err = s.repo.SetSession(ctx, user.UUID, refreshSession)
+	if err != nil {
+		s.log.Error("failed to set session:", err)
+		return nil, nil, err
+	}
+
+	s.log.Info("user logged in successfully")
+	return access, refresh, nil
 }

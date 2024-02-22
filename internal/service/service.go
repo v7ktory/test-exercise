@@ -12,8 +12,8 @@ import (
 )
 
 type Auth interface {
-	SignUp(ctx context.Context, user *model.User) (string, string, error)
-	Login(ctx context.Context, email, password string) (string, error)
+	SignUp(ctx context.Context, user *model.User) (*model.AccessToken, *model.RefreshToken, error)
+	Login(ctx context.Context, email, password string) (*model.AccessToken, *model.RefreshToken, error)
 }
 
 type Service struct {

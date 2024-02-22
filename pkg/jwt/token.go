@@ -11,13 +11,6 @@ import (
 	"github.com/v7ktory/test/internal/model"
 )
 
-type JWTManager interface {
-	GenerateTokenPair(userID uuid.UUID, accessTokenTTL, refreshTokenTTL time.Duration) (*model.AccessToken, *model.RefreshToken, error)
-	generateAccessToken(userID uuid.UUID, ttl time.Duration) (*model.AccessToken, error)
-	generateRefreshToken(userID uuid.UUID, ttl time.Duration) (*model.RefreshToken, error)
-	validateToken(signedToken string) (string, error)
-}
-
 type JWT struct {
 	signingKey string
 }
@@ -29,7 +22,6 @@ func NewJWT(signingKey string) *JWT {
 }
 
 func (j *JWT) GenerateTokenPair(userID uuid.UUID, accessTokenTTL, refreshTokenTTL time.Duration) (*model.AccessToken, *model.RefreshToken, error) {
-
 	accessToken, err := j.generateAccessToken(userID, accessTokenTTL)
 	if err != nil {
 		return nil, nil, err
@@ -52,12 +44,12 @@ func (j *JWT) generateAccessToken(userID uuid.UUID, ttl time.Duration) (*model.A
 		return nil, err
 	}
 
-	accessToken := model.AccessToken{
+	accessToken := &model.AccessToken{
 		Token:  signedString,
 		ID:     uuid.New(),
 		UserID: userID,
 	}
-	return &accessToken, nil
+	return accessToken, nil
 }
 
 func (j *JWT) generateRefreshToken(userID uuid.UUID, ttl time.Duration) (*model.RefreshToken, error) {
@@ -66,31 +58,39 @@ func (j *JWT) generateRefreshToken(userID uuid.UUID, ttl time.Duration) (*model.
 	if err != nil {
 		return nil, err
 	}
-	token := base64.StdEncoding.EncodeToString(tokenBytes)
-
-	refreshToken := model.RefreshToken{
+	token := base64.URLEncoding.EncodeToString(tokenBytes)
+	refreshToken := &model.RefreshToken{
 		Token:  token,
 		ID:     uuid.New(),
 		UserID: userID,
 	}
-	return &refreshToken, nil
+	return refreshToken, nil
 }
 
-func (j *JWT) validateToken(signedToken string) (string, error) {
-	token, err := jwt.ParseWithClaims(signedToken, &jwt.MapClaims{}, func(token *jwt.Token) (interface{}, error) {
+func (j *JWT) ValidateToken(signedToken string) (*uuid.UUID, error) {
+	token, err := jwt.Parse(signedToken, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
 		return []byte(j.signingKey), nil
 	})
 	if err != nil {
-		return "", err
+		return nil, fmt.Errorf("token parsing failed: %w", err)
 	}
 
-	claims, ok := token.Claims.(*jwt.MapClaims)
+	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok || !token.Valid {
-		return "", fmt.Errorf("token validation failed")
+		return nil, fmt.Errorf("token validation failed")
 	}
 
-	return (*claims)["sub"].(string), nil
+	subject, ok := claims["sub"].(string)
+	if !ok {
+		return nil, fmt.Errorf("subject not found in claims")
+	}
+
+	userID, err := uuid.Parse(subject)
+	if err != nil {
+		return nil, fmt.Errorf("invalid user ID: %w", err)
+	}
+	return &userID, nil
 }

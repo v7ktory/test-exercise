@@ -6,8 +6,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/v7ktory/test/internal/model"
+	"github.com/v7ktory/test/pkg/database/mongodb"
 	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 var (
@@ -16,17 +16,17 @@ var (
 )
 
 type AuthRepository struct {
-	db *mongo.Collection
+	provider *mongodb.Provider
 }
 
-func NewAuthRepository(db *mongo.Database) *AuthRepository {
+func NewAuthRepository(provider *mongodb.Provider) *AuthRepository {
 	return &AuthRepository{
-		db: db.Collection("users"),
+		provider: provider,
 	}
 }
 
 func (r *AuthRepository) Create(ctx context.Context, user *model.User) (uuid.UUID, error) {
-	_, err := r.db.InsertOne(ctx, user)
+	_, err := r.provider.GetCollection("users").InsertOne(ctx, user)
 	if err != nil {
 		return uuid.Nil, err
 	}
@@ -35,8 +35,8 @@ func (r *AuthRepository) Create(ctx context.Context, user *model.User) (uuid.UUI
 
 func (r *AuthRepository) GetByCredentials(ctx context.Context, email, password string) (*model.User, error) {
 	var user model.User
-	if err := r.db.FindOne(ctx, bson.M{"email": email, "password": password}).Decode(&user); err != nil {
-		return &model.User{}, ErrUserNotFound
+	if err := r.provider.GetCollection("users").FindOne(ctx, bson.M{"email": email, "password": password}).Decode(&user); err != nil {
+		return nil, ErrUserNotFound
 	}
 	return &user, nil
 }
@@ -45,8 +45,7 @@ func (r *AuthRepository) GetByRefreshToken(ctx context.Context, refreshToken str
 	return model.User{}, nil
 }
 
-func (r *AuthRepository) SetSession(ctx context.Context, userID uuid.UUID, session model.Session) error {
-	_, err := r.db.UpdateOne(ctx, bson.M{"_id": userID}, bson.M{"$set": bson.M{"session": session}})
-
+func (r *AuthRepository) SetSession(ctx context.Context, userID uuid.UUID, session model.RefreshSession) error {
+	_, err := r.provider.GetCollection("users").UpdateOne(ctx, bson.M{"_id": userID}, bson.M{"$set": bson.M{"session": session}})
 	return err
 }

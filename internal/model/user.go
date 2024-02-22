@@ -20,14 +20,17 @@ type User struct {
 	Name         string    `json:"name" bson:"name"`
 	Email        string    `json:"email" bson:"email"`
 	Password     string    `json:"password" bson:"password"`
-	RegisteredAt time.Time `json:"registeredAt" bson:"registeredAt"`
+	RegisteredAt time.Time `json:"registered_at" bson:"registered_at"`
 }
 
 type SignUpInput struct {
-	UUID     uuid.UUID `json:"user_id" bson:"_id"`
-	Name     string    `json:"name" bson:"name"`
-	Email    string    `json:"email" bson:"email"`
-	Password string    `json:"password" bson:"password"`
+	Name     string `json:"name" bson:"name"`
+	Email    string `json:"email" bson:"email"`
+	Password string `json:"password" bson:"password"`
+}
+
+type SignUpResponse struct {
+	AccessToken `json:"access_token"`
 }
 
 func (u *User) Validate() error {

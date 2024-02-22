@@ -2,34 +2,66 @@ package mongodb
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"strings"
 	"time"
 
+	"github.com/v7ktory/test/internal/config"
+	"go.mongodb.org/mongo-driver/bson/mgocompat"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-func NewMongoDB(uri, username, password string) (*mongo.Client, error) {
-	serverAPI := options.ServerAPI(options.ServerAPIVersion1)
-	opts := options.Client().
-		ApplyURI(uri).
-		SetServerAPIOptions(serverAPI).
-		SetTimeout(10 * time.Second)
+var errNoDBHosts = errors.New("no dbHosts")
 
-	if username != "" && password != "" {
-		opts.SetAuth(options.Credential{
-			Username: username,
-			Password: password,
+type Provider struct {
+	db           *mongo.Database
+	queryTimeout time.Duration
+}
+
+func NewMongoDB(ctx context.Context, mongoCfg config.MongoCfg) (*Provider, error) {
+	if len(mongoCfg.Hosts) == 0 {
+		return nil, errNoDBHosts
+	}
+	connOpt := options.Client()
+	uri := "mongodb://" + strings.Join(mongoCfg.Hosts, ",")
+	connOpt.ApplyURI(uri)
+	connOpt.SetRegistry(mgocompat.Registry)
+
+	if mongoCfg.Username != "" && mongoCfg.Password != "" {
+		connOpt.SetAuth(options.Credential{
+			AuthSource: mongoCfg.DB,
+			Username:   mongoCfg.Username,
+			Password:   mongoCfg.Password,
 		})
 	}
 
-	client, err := mongo.Connect(context.Background(), opts)
+	queryTimeout := time.Second * time.Duration(mongoCfg.QueryTimeout)
+
+	ctx, cancel := context.WithTimeout(ctx, queryTimeout)
+	defer cancel()
+
+	client, err := mongo.Connect(ctx, connOpt)
 	if err != nil {
-		return nil, err
-	}
-	err = client.Ping(context.Background(), nil)
-	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("can't connect to mongodb: %w", err)
 	}
 
-	return client, nil
+	err = client.Ping(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("can't ping mongodb: %w", err)
+	}
+
+	return &Provider{
+		queryTimeout: queryTimeout,
+		db:           client.Database(mongoCfg.DB),
+	}, nil
+}
+
+func (p *Provider) GetCollection(name string) *mongo.Collection {
+	return p.db.Collection(name)
+}
+
+func (p *Provider) GetClient() *mongo.Client {
+	return p.db.Client()
 }
