@@ -29,7 +29,11 @@ type SignUpInput struct {
 	Password string `json:"password" bson:"password"`
 }
 
-type SignUpResponse struct {
+type LoginInput struct {
+	Email    string `json:"email" bson:"email"`
+	Password string `json:"password" bson:"password"`
+}
+type Response struct {
 	AccessToken `json:"access_token"`
 }
 

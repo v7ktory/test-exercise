@@ -83,9 +83,14 @@ func (s *AuthService) SignUp(ctx context.Context, user *model.User) (*model.Acce
 }
 
 func (s *AuthService) Login(ctx context.Context, email, password string) (*model.AccessToken, *model.RefreshToken, error) {
-	user, err := s.repo.GetByCredentials(ctx, email, password)
+	user, err := s.repo.GetByCredentials(ctx, email)
 	if err != nil {
 		s.log.Error("failed to get user by credentials:", err)
+		return nil, nil, err
+	}
+
+	if !s.hash.CompareHash(password, user.Password) {
+		s.log.Error("invalid credentials")
 		return nil, nil, err
 	}
 

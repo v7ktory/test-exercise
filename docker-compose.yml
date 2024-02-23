@@ -7,7 +7,6 @@ services:
       - 8080:8080
     depends_on:
       - mongodb
-      - mongocli
     volumes:
       - app_data:/usr/src/app
       
@@ -32,23 +31,6 @@ services:
       timeout: 30s
       retries: 3
 
-  mongocli:
-    image: mongo-express
-    container_name: mongocli
-    environment:
-      - ME_CONFIG_OPTIONS_EDITORTHEME=default
-      - ME_CONFIG_MONGODB_SERVER=mongo_db
-      - ME_CONFIG_MONGODB_PORT=27017
-      - ME_CONFIG_MONGODB_ENABLE_ADMIN=true
-      - ME_CONFIG_MONGODB_AUTH_DATABASE=mydb
-      - ME_CONFIG_MONGODB_ADMINUSERNAME=root
-      - ME_CONFIG_MONGODB_ADMINPASSWORD=rootpassword
-    ports:
-      - "8081:8081"
-    restart: on-failure
-    depends_on:
-      - mongodb
-      
 volumes:
   app_data:
   mongodb_data:

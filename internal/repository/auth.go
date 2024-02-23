@@ -29,24 +29,28 @@ func NewAuthRepository(provider *mongodb.Provider) *AuthRepository {
 func (r *AuthRepository) Create(ctx context.Context, user *model.User) (uuid.UUID, error) {
 	collection := r.provider.GetCollection("users")
 
-	ctx, cancel := context.WithTimeout(ctx, time.Duration(r.provider.QueryTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(r.provider.QueryTimeout))
 	defer cancel()
+
+	if err := collection.FindOne(ctx, bson.M{"email": user.Email}).Err(); err == nil {
+		return uuid.Nil, ErrUserExists
+	}
 
 	_, err := collection.InsertOne(ctx, user)
 	if err != nil {
-		return uuid.Nil, ErrUserExists
+		return uuid.Nil, err
 	}
 	return user.UUID, nil
 }
 
-func (r *AuthRepository) GetByCredentials(ctx context.Context, email, password string) (*model.User, error) {
+func (r *AuthRepository) GetByCredentials(ctx context.Context, email string) (*model.User, error) {
 	collection := r.provider.GetCollection("users")
 
-	ctx, cancel := context.WithTimeout(ctx, time.Duration(r.provider.QueryTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(r.provider.QueryTimeout))
 	defer cancel()
 
 	var user model.User
-	if err := collection.FindOne(ctx, bson.M{"email": email, "password": password}).Decode(&user); err != nil {
+	if err := collection.FindOne(ctx, bson.M{"email": email}).Decode(&user); err != nil {
 		return nil, ErrUserNotFound
 	}
 	return &user, nil
@@ -59,7 +63,7 @@ func (r *AuthRepository) GetByRefreshToken(ctx context.Context, refreshToken str
 func (r *AuthRepository) SetSession(ctx context.Context, userID uuid.UUID, session model.RefreshSession) error {
 	collection := r.provider.GetCollection("users")
 
-	ctx, cancel := context.WithTimeout(ctx, time.Duration(r.provider.QueryTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(r.provider.QueryTimeout))
 	defer cancel()
 
 	_, err := collection.UpdateOne(ctx, bson.M{"_id": userID}, bson.M{"$set": bson.M{"session": session}})

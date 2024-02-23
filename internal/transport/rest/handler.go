@@ -19,5 +19,11 @@ func NewHandler(svc service.Service) *Handler {
 func (h *Handler) InitRoutes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/auth/signup", h.SignUp)
+	mux.HandleFunc("/auth/login", h.Login)
+	mux.HandleFunc("/", hello)
 	return mux
+}
+
+func hello(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("hello"))
 }

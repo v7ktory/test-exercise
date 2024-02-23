@@ -12,6 +12,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -ldflags "-s -w -extldflags '-static'" -o 
 
 FROM scratch
 
+COPY .env .
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /build/bin/app /
 

@@ -37,7 +37,7 @@ func NewMongoDB(ctx context.Context, mongoCfg config.MongoCfg) (*Provider, error
 		})
 	}
 
-	queryTimeout := time.Second * time.Duration(mongoCfg.QueryTimeout)
+	queryTimeout := time.Duration(mongoCfg.QueryTimeout)
 
 	ctx, cancel := context.WithTimeout(ctx, queryTimeout)
 	defer cancel()

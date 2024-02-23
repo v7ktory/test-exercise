@@ -37,7 +37,7 @@ func (h *Handler) SignUp(w http.ResponseWriter, r *http.Request) {
 
 	setRefreshTokenCookie(w, refresh.Token)
 
-	response := model.SignUpResponse{
+	response := model.Response{
 		AccessToken: model.AccessToken{
 			Token:  access.Token,
 			ID:     access.ID,
@@ -47,6 +47,39 @@ func (h *Handler) SignUp(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
 }
+
+func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
+	var input model.LoginInput
+
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		BadRequestErrorHandler(w, r)
+		return
+	}
+
+	if !validation.IsEmailValid(input.Email) {
+		BadRequestErrorHandler(w, r)
+		return
+	}
+
+	access, refresh, err := h.Svc.Login(r.Context(), input.Email, input.Password)
+	if err != nil {
+		InternalServerErrorHandler(w, r)
+		return
+	}
+
+	setRefreshTokenCookie(w, refresh.Token)
+
+	response := model.Response{
+		AccessToken: model.AccessToken{
+			Token:  access.Token,
+			ID:     access.ID,
+			UserID: access.UserID,
+		},
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
 func setRefreshTokenCookie(w http.ResponseWriter, refreshToken string) {
 	cookie := http.Cookie{
 		Name:     "refresh_token",
