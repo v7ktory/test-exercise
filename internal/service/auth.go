@@ -33,6 +33,10 @@ func NewAuthService(repo repository.Repository, hash hash.Hasher, jwt jwt.JWT, l
 	}
 }
 
+/*
+Здесь хэшируем переданный пароль и записываем его в базу данных
+Так же создаем сессию и привязываем её к юзеру
+*/
 func (s *AuthService) SignUp(ctx context.Context, user *model.User) (uuid.UUID, error) {
 	hashedPassword, err := s.hash.Hash(user.Password)
 	if err != nil {
@@ -68,6 +72,10 @@ func (s *AuthService) SignUp(ctx context.Context, user *model.User) (uuid.UUID, 
 	return userID, nil
 }
 
+/*
+Валидируем данные и если всё ок генерируем токены и хешируем refresh
+Так же обновляем сессию
+*/
 func (s *AuthService) Login(ctx context.Context, userID uuid.UUID, email, password string) (*model.AccessToken, *model.RefreshToken, error) {
 	user, err := s.repo.GetByEmail(ctx, email)
 	if err != nil {
@@ -123,27 +131,39 @@ func (s *AuthService) Login(ctx context.Context, userID uuid.UUID, email, passwo
 	return access, refresh, nil
 }
 
-func (s *AuthService) Refresh(ctx context.Context, userID uuid.UUID, token string) (*model.AccessToken, *model.RefreshToken, error) {
+/*
+Проверяем переданные токены и если все ок генерируем новые
+и обновляем сессию
+*/
+func (s *AuthService) Refresh(ctx context.Context, userID uuid.UUID, accessTokenBearer, refreshTokenCookie string) (*model.AccessToken, *model.RefreshToken, error) {
 	session, err := s.repo.Session.GetByUserID(ctx, userID)
 	if err != nil {
 		s.log.Error("failed to get session:", err)
 		return nil, nil, err
 	}
 
-	// Проверяем соответствие хешированного токена обновления переданному токену
-	if !s.hash.CompareHash(token, session.RefreshToken.Token) {
+	if !s.hash.CompareHash(refreshTokenCookie, session.RefreshToken.Token) {
 		s.log.Error("failed to compare hash")
 		return nil, nil, errors.New("failed to compare hash")
 	}
 
-	// Генерируем новый токен доступа
+	id, err := s.jwt.ValidateToken(accessTokenBearer)
+	if err != nil {
+		s.log.Error("failed to validate token:", err)
+		return nil, nil, err
+	}
+
+	if userID != *id {
+		s.log.Error("user not found")
+		return nil, nil, errors.New("user not found")
+	}
+
 	access, refresh, err := s.jwt.GenerateTokenPair(userID, s.accessTokenTTL, s.refreshTokenTTL)
 	if err != nil {
 		s.log.Error("failed to generate token pair:", err)
 		return nil, nil, err
 	}
 
-	// Хешируем новый токен обновления для сохранения в базе данных
 	hashedRefresh, err := s.hash.Hash(refresh.Token)
 	if err != nil {
 		s.log.Error("failed to hash new refresh token:", err)

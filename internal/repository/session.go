@@ -26,6 +26,7 @@ func NewSessionRepository(provider *mongodb.Provider) *SessionRepository {
 	}
 }
 
+// Создаём сессию
 func (r *SessionRepository) Create(ctx context.Context, session model.Session) error {
 	collection := r.provider.GetCollection("sessions")
 
@@ -39,6 +40,7 @@ func (r *SessionRepository) Create(ctx context.Context, session model.Session) e
 	return nil
 }
 
+// Возвращаем сессию по ID
 func (r *SessionRepository) GetByUserID(ctx context.Context, userID uuid.UUID) (*model.Session, error) {
 	collection := r.provider.GetCollection("sessions")
 
@@ -53,6 +55,7 @@ func (r *SessionRepository) GetByUserID(ctx context.Context, userID uuid.UUID) (
 	return &session, nil
 }
 
+// Обновляем сессию
 func (r *SessionRepository) Update(ctx context.Context, session model.Session) error {
 	collection := r.provider.GetCollection("sessions")
 

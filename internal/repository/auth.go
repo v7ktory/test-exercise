@@ -26,6 +26,7 @@ func NewAuthRepository(provider *mongodb.Provider) *AuthRepository {
 	}
 }
 
+// Создаём пользователя
 func (r *AuthRepository) Create(ctx context.Context, user *model.User) (uuid.UUID, error) {
 	collection := r.provider.GetCollection("users")
 
@@ -43,6 +44,7 @@ func (r *AuthRepository) Create(ctx context.Context, user *model.User) (uuid.UUI
 	return user.UUID, nil
 }
 
+// Возвращаем пользователя по email
 func (r *AuthRepository) GetByEmail(ctx context.Context, email string) (*model.User, error) {
 	collection := r.provider.GetCollection("users")
 

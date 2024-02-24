@@ -2,6 +2,7 @@ version: '3.9'
 services:
   app:
     build: .
+    image: jwt-app
     container_name: jwt-app
     ports:
       - 8080:8080
@@ -9,7 +10,9 @@ services:
       - mongodb
     volumes:
       - app_data:/usr/src/app
-      
+    networks:
+      - jwt-network  
+
   mongodb:
     image: mongo:7.0.5
     container_name: mongodb
@@ -30,8 +33,13 @@ services:
       interval: 5s
       timeout: 30s
       retries: 3
+    networks:
+      - jwt-network  
 
 volumes:
   app_data:
   mongodb_data:
   mongodb_config:
+
+networks:
+  jwt-network:  
