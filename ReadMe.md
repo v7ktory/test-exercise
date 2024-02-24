@@ -12,7 +12,7 @@
 
 ```sh
 git clone https://github.com/v7ktory/test-exercise.git
-cd test
+cd test-exercise
 ```
 
 команда make собирает приложение и запускает в докер контейнере
