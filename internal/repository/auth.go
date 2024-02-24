@@ -43,7 +43,7 @@ func (r *AuthRepository) Create(ctx context.Context, user *model.User) (uuid.UUI
 	return user.UUID, nil
 }
 
-func (r *AuthRepository) GetByCredentials(ctx context.Context, email string) (*model.User, error) {
+func (r *AuthRepository) GetByEmail(ctx context.Context, email string) (*model.User, error) {
 	collection := r.provider.GetCollection("users")
 
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(r.provider.QueryTimeout))
@@ -54,18 +54,4 @@ func (r *AuthRepository) GetByCredentials(ctx context.Context, email string) (*m
 		return nil, ErrUserNotFound
 	}
 	return &user, nil
-}
-
-func (r *AuthRepository) GetByRefreshToken(ctx context.Context, refreshToken string) (model.User, error) {
-	return model.User{}, nil
-}
-
-func (r *AuthRepository) SetSession(ctx context.Context, userID uuid.UUID, session model.RefreshSession) error {
-	collection := r.provider.GetCollection("users")
-
-	ctx, cancel := context.WithTimeout(ctx, time.Duration(r.provider.QueryTimeout))
-	defer cancel()
-
-	_, err := collection.UpdateOne(ctx, bson.M{"_id": userID}, bson.M{"$set": bson.M{"session": session}})
-	return err
 }

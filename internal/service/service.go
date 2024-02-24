@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/v7ktory/test/internal/model"
 	"github.com/v7ktory/test/internal/repository"
 	"github.com/v7ktory/test/pkg/hash"
@@ -12,8 +13,9 @@ import (
 )
 
 type Auth interface {
-	SignUp(ctx context.Context, user *model.User) (*model.AccessToken, *model.RefreshToken, error)
-	Login(ctx context.Context, email, password string) (*model.AccessToken, *model.RefreshToken, error)
+	SignUp(ctx context.Context, user *model.User) (uuid.UUID, error)
+	Login(ctx context.Context, userID uuid.UUID, email, password string) (*model.AccessToken, *model.RefreshToken, error)
+	Refresh(ctx context.Context, userID uuid.UUID, token string) (*model.AccessToken, *model.RefreshToken, error)
 }
 
 type Service struct {

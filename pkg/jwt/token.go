@@ -26,10 +26,12 @@ func (j *JWT) GenerateTokenPair(userID uuid.UUID, accessTokenTTL, refreshTokenTT
 	if err != nil {
 		return nil, nil, err
 	}
-	refreshToken, err := j.generateRefreshToken(userID, refreshTokenTTL)
+
+	refreshToken, err := j.generateRefreshToken(userID, accessToken.ID, refreshTokenTTL)
 	if err != nil {
 		return nil, nil, err
 	}
+
 	return accessToken, refreshToken, nil
 }
 
@@ -45,14 +47,14 @@ func (j *JWT) generateAccessToken(userID uuid.UUID, ttl time.Duration) (*model.A
 	}
 
 	accessToken := &model.AccessToken{
-		Token:  signedString,
 		ID:     uuid.New(),
 		UserID: userID,
+		Token:  signedString,
 	}
 	return accessToken, nil
 }
 
-func (j *JWT) generateRefreshToken(userID uuid.UUID, ttl time.Duration) (*model.RefreshToken, error) {
+func (j *JWT) generateRefreshToken(userID, accessTokenID uuid.UUID, ttl time.Duration) (*model.RefreshToken, error) {
 	tokenBytes := make([]byte, 32)
 	_, err := rand.Read(tokenBytes)
 	if err != nil {
@@ -60,15 +62,19 @@ func (j *JWT) generateRefreshToken(userID uuid.UUID, ttl time.Duration) (*model.
 	}
 	token := base64.URLEncoding.EncodeToString(tokenBytes)
 	refreshToken := &model.RefreshToken{
-		Token:  token,
-		ID:     uuid.New(),
-		UserID: userID,
+		ID:            uuid.New(),
+		UserID:        userID,
+		AccessTokenID: accessTokenID,
+		Token:         token,
+		ExpiresAt:     time.Now().Add(ttl),
 	}
 	return refreshToken, nil
 }
 
 func (j *JWT) ValidateToken(signedToken string) (*uuid.UUID, error) {
-	token, err := jwt.Parse(signedToken, func(token *jwt.Token) (interface{}, error) {
+	// Парсинг и валидация токена
+	token, err := jwt.ParseWithClaims(signedToken, &jwt.MapClaims{}, func(token *jwt.Token) (interface{}, error) {
+		// Проверка метода подписи
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
@@ -78,16 +84,19 @@ func (j *JWT) ValidateToken(signedToken string) (*uuid.UUID, error) {
 		return nil, fmt.Errorf("token parsing failed: %w", err)
 	}
 
-	claims, ok := token.Claims.(jwt.MapClaims)
+	// Проверка наличия и валидности токена
+	claims, ok := token.Claims.(*jwt.MapClaims)
 	if !ok || !token.Valid {
 		return nil, fmt.Errorf("token validation failed")
 	}
 
-	subject, ok := claims["sub"].(string)
+	// Получение идентификатора пользователя из токена
+	subject, ok := (*claims)["sub"].(string)
 	if !ok {
 		return nil, fmt.Errorf("subject not found in claims")
 	}
 
+	// Парсинг идентификатора пользователя в UUID
 	userID, err := uuid.Parse(subject)
 	if err != nil {
 		return nil, fmt.Errorf("invalid user ID: %w", err)

@@ -26,9 +26,3 @@ func BadRequestErrorHandler(w http.ResponseWriter, r *http.Request) {
 	response := ErrorResponse{Message: "Bad Request"}
 	json.NewEncoder(w).Encode(response)
 }
-
-func UnauthorizedErrorHandler(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusUnauthorized)
-	response := ErrorResponse{Message: "Unauthorized"}
-	json.NewEncoder(w).Encode(response)
-}

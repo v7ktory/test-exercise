@@ -3,6 +3,7 @@ package rest
 import (
 	"net/http"
 
+	"github.com/gorilla/mux"
 	"github.com/v7ktory/test/internal/service"
 )
 
@@ -17,13 +18,12 @@ func NewHandler(svc service.Service) *Handler {
 }
 
 func (h *Handler) InitRoutes() http.Handler {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/auth/signup", h.SignUp)
-	mux.HandleFunc("/auth/login", h.Login)
-	mux.HandleFunc("/", hello)
-	return mux
-}
 
-func hello(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("hello"))
+	r := mux.NewRouter()
+
+	r.HandleFunc("/auth/signup", h.SignUp).Methods("POST")
+	r.HandleFunc("/auth/login", h.Login).Methods("POST")
+	r.HandleFunc("/auth/refresh", h.Refresh).Methods("POST")
+
+	return r
 }

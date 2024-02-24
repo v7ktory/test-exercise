@@ -3,7 +3,6 @@ package app
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -30,7 +29,6 @@ func Run() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(cfg.Mongo.Hosts, cfg.Mongo.Username, cfg.Mongo.Password, cfg.Mongo.DB)
 	mongo, err := mongodb.NewMongoDB(context.Background(), cfg.Mongo)
 	if err != nil {
 		log.Fatal(err)

@@ -11,7 +11,7 @@ import (
 
 const (
 	defaultAccessTokenTTL  = 30 * time.Minute
-	defaultRefreshTokenTTL = 24 * time.Hour * 30
+	defaultRefreshTokenTTL = 24 * time.Hour * 30 // 30 days
 
 	defaultQueryTimeout = 10 * time.Second
 
