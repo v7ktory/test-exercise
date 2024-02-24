@@ -34,6 +34,7 @@ go run ./cmd/app/main.go
 **В body вводим email и password и получаем userID**
 ![Screenshot](screenshot/screen1.png)
 **В параметре запроса вводим полученный userID и в body указываем наши email и password**
+
 **Затем в header получаем access токен**
 ![Screenshot](screenshot/screen2.png)
 **В параметре запроса вводим полученный userID**
