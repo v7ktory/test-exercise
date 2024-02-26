@@ -14,7 +14,7 @@ import (
 	"github.com/v7ktory/test/internal/repository"
 	"github.com/v7ktory/test/internal/server"
 	"github.com/v7ktory/test/internal/service"
-	"github.com/v7ktory/test/internal/transport/rest"
+	h "github.com/v7ktory/test/internal/transport/http"
 
 	"github.com/v7ktory/test/pkg/database/mongodb"
 	"github.com/v7ktory/test/pkg/hash"
@@ -48,7 +48,7 @@ func Run() {
 		accessTTL,
 		refreshTTL,
 	)
-	handler := rest.NewHandler(*service)
+	handler := h.NewHandler(*service)
 	srv := server.NewServer(cfg, handler.InitRoutes())
 
 	go func() {
