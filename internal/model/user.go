@@ -18,15 +18,11 @@ type User struct {
 	Password string    `json:"password" bson:"password"`
 }
 
-type Input struct {
-	User
-}
-
-func (i *Input) Validate() error {
+func (u *User) Validate() error {
 	switch {
-	case i.Email == "":
+	case u.Email == "":
 		return ErrEmailEmpty
-	case i.Password == "":
+	case u.Password == "":
 		return ErrPasswordEmpty
 	default:
 		return nil

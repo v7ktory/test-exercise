@@ -19,7 +19,7 @@ func (h *Handler) SignUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var input model.Input
+	var input model.User
 
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		BadRequestErrorHandler(w, r)
@@ -66,7 +66,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var input model.Input
+	var input model.User
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		BadRequestErrorHandler(w, r)
 		return
